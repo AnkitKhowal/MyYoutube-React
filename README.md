@@ -11,7 +11,7 @@ This Project is a clone of youtube in React
 - react-testing-library
 
 # Requirements:
--- Features : 
+- Features : 
     - On load of homepage it should pull , all the latest videos through Youtube api
     - It should support Search functionality
         - Debouncing 

@@ -1,10 +1,64 @@
-import React from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { toggleMenu } from "../utils/appSlice";
+import { YOUTUBE_SUGGESTION } from '../utils/constants';
+import { cacheResults } from '../utils/searchSlice';
 
 const Head = () => {
 
   const dispatch = useDispatch();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchCache = useSelector((store) => store.search);
+
+  useEffect(() => {
+    // Make an api call after every keypress
+    //But if the diff between 2 api calls is <200 ms
+    //Decline  the api call
+
+    const timer = setTimeout(() => {
+      if (searchQuery in searchCache) {
+        console.log("Getting from cache");
+        setSearchSuggestions(searchCache[searchQuery]);
+      }
+      else {
+        getSearchSuggestions()
+      }
+    }, 1000);
+
+    //called when component destroyed
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  /**
+   * This is very important
+   * key - i
+   *  - render the component
+   *  - UseEffect called
+   *  - start timer => Make an api call after 200 ms
+   * 
+   *  - key - ip
+   *  - Destroy the existing component since searchQuery has changed 
+   *  - which clear the  setTimeout even before it makes the api call
+   *  - render the component
+   *  - useEffect()
+   *  - start Timer => make an Api  call after 200 ms
+   * 
+   *  -setTimeout(200) - Make an api call
+   */
+
+  const getSearchSuggestions = async () => {
+    console.log("API call " + searchQuery);
+    const data = await fetch(YOUTUBE_SUGGESTION + searchQuery);
+    const json = await data.json();
+    setSearchSuggestions(json[1]);
+    dispatch(cacheResults({[searchQuery]: json[1]}))
+    
+    // console.log(json[1]);
+  }
 
   const toggleSideBar = () => {
     dispatch(toggleMenu());
@@ -29,10 +83,28 @@ const Head = () => {
       </div>
 
       <div className="col-span-10 px-10">
-        <input type="text" className="w-1/2 border border-gray-700 p-2 rounded-l-full"></input>
-        <button className='border border-gray-400 p-2 rounded-r-full bg-gray-200 px-5'>🔍</button>
+        <div>
+          <input
+            type="text"
+            className="w-1/2 border border-gray-700 p-2 rounded-l-full"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setShowSuggestions(false)}
+            onScroll={() => setShowSuggestions(false)}
+          ></input>
+          <button
+            className='border border-gray-400 p-2 rounded-r-full bg-gray-200 px-5'
+          >🔍</button>
+        </div>
+        {showSuggestions && <div className="fixed bg-white py-2 px-2 w-[42rem] rounded-3xl absolute ">
+          <ul>
+            {searchSuggestions.map(suggestion => (
+              <li
+                key={suggestion} className="py-2 px-3 shadow-sm hover:bg-gray-100">🔍  {suggestion}</li>))}
+          </ul>
+        </div>}
       </div>
-
       <div className="col-span-1">
         <img
           className='h-8'
